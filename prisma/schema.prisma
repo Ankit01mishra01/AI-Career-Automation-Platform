@@ -60,7 +60,7 @@ model CoverLetter {
   id             String   @id @default(cuid())
   userId         String
   user           User     @relation(fields: [userId], references: [id])
-  content        String
+  content        String   @db.Text
   jobDescription String?
   companyName    String
   jobTitle       String

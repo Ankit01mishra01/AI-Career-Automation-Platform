@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { generateGeminiContent } from "@/lib/gemini";
 import { auth } from "@clerk/nextjs/server";
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY);
 
 // Fallback responses when AI API is not configured
 const getFallbackResponse = (prompt, type) => {
@@ -27,7 +25,7 @@ export async function POST(request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { prompt, type, model = "gemini-1.5-flash" } = await request.json();
+    const { prompt, type } = await request.json();
     requestType = type || "default";
 
     if (!prompt) {
@@ -37,27 +35,8 @@ export async function POST(request) {
       );
     }
 
-    // Check if API key is properly configured
-    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY;
-    if (!apiKey || apiKey === 'your_gemini_api_key_here') {
-      console.warn('AI API key not configured, returning fallback response');
-      return NextResponse.json({
-        success: true,
-        data: {
-          content: getFallbackResponse(prompt, type),
-          type,
-          timestamp: new Date().toISOString(),
-        },
-      });
-    }
-
-    // Rate limiting could be added here
-    
-    const aiModel = genAI.getGenerativeModel({ model });
-
-    // Add context based on type
     let enhancedPrompt = prompt;
-    
+
     switch (type) {
       case "resume":
         enhancedPrompt = `As a professional resume writer, ${prompt}. 
@@ -83,18 +62,34 @@ export async function POST(request) {
         enhancedPrompt = prompt;
     }
 
-    const result = await aiModel.generateContent(enhancedPrompt);
-    const response = result.response;
-    const text = response.text();
+    const result = await generateGeminiContent(enhancedPrompt);
 
-    // Log the request for monitoring (remove sensitive data)
-    console.log(`AI request: ${type || 'general'} - ${prompt.substring(0, 50)}...`);
+    if (!result.success) {
+      if (result.reason === "MISSING_API_KEY") {
+        return NextResponse.json({
+          success: true,
+          data: {
+            content: getFallbackResponse(prompt, type),
+            type,
+            timestamp: new Date().toISOString(),
+          },
+        });
+      }
+
+      return NextResponse.json(
+        { success: false, error: result.userMessage },
+        { status: 502 }
+      );
+    }
+
+    console.log(`AI request: ${type || "general"} - ${prompt.substring(0, 50)}...`);
 
     return NextResponse.json({
       success: true,
       data: {
-        content: text,
+        content: result.content,
         type,
+        model: result.model,
         timestamp: new Date().toISOString(),
       },
     });

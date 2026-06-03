@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
-import { Edit2, Eye, Trash2 } from "lucide-react";
+import { Eye, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   Card,
@@ -23,7 +23,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-
 import { deleteCoverLetter } from "@/actions/cover-letter";
 
 export default function CoverLetterList({ coverLetters }) {
@@ -55,9 +54,9 @@ export default function CoverLetterList({ coverLetters }) {
   return (
     <div className="space-y-4">
       {coverLetters.map((letter) => (
-        <Card key={letter.id} className="group relative ">
+        <Card key={letter.id} className="group relative">
           <CardHeader>
-            <div className="flex items-start justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
               <div>
                 <CardTitle className="text-xl gradient-title">
                   {letter.jobTitle} at {letter.companyName}
@@ -67,16 +66,17 @@ export default function CoverLetterList({ coverLetters }) {
                 </CardDescription>
               </div>
               <div className="flex space-x-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => router.push(`/ai-cover-letter/${letter.id}`)}
+                  aria-label="View cover letter"
+                >
+                  <Eye className="h-4 w-4" />
+                </Button>
                 <AlertDialog>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => router.push(`/ai-cover-letter/${letter.id}`)}
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
                   <AlertDialogTrigger asChild>
-                    <Button variant="outline" size="icon">
+                    <Button variant="outline" size="icon" aria-label="Delete cover letter">
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </AlertDialogTrigger>
@@ -105,7 +105,7 @@ export default function CoverLetterList({ coverLetters }) {
           </CardHeader>
           <CardContent>
             <div className="text-muted-foreground text-sm line-clamp-3">
-              {letter.jobDescription}
+              {letter.content || letter.jobDescription}
             </div>
           </CardContent>
         </Card>

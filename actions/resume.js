@@ -1,12 +1,10 @@
 "use server";
 
 import { db } from "@/lib/prisma";
+import { isDbConnectionError, DB_SETUP_HINT } from "@/lib/db-utils";
+import { generateGeminiContent } from "@/lib/gemini";
 import { auth } from "@clerk/nextjs/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { revalidatePath } from "next/cache";
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 export async function saveResume(content) {
   const { userId } = await auth();
@@ -44,17 +42,26 @@ export async function getResume() {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
 
-  const user = await db.user.findUnique({
-    where: { clerkUserId: userId },
-  });
+  try {
+    const user = await db.user.findUnique({
+      where: { clerkUserId: userId },
+    });
 
-  if (!user) throw new Error("User not found");
+    if (!user) throw new Error("User not found");
 
-  return await db.resume.findUnique({
-    where: {
-      userId: user.id,
-    },
-  });
+    return await db.resume.findUnique({
+      where: {
+        userId: user.id,
+      },
+    });
+  } catch (error) {
+    if (isDbConnectionError(error)) {
+      const dbError = new Error(DB_SETUP_HINT);
+      dbError.code = "DB_CONNECTION_ERROR";
+      throw dbError;
+    }
+    throw error;
+  }
 }
 
 export async function improveWithAI({ current, type }) {
@@ -70,53 +77,59 @@ export async function improveWithAI({ current, type }) {
 
   if (!user) throw new Error("User not found");
 
-  // Check if API key is properly configured
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY;
-  if (!apiKey || apiKey === 'your_gemini_api_key_here') {
-    console.warn('AI API key not configured, returning original content with basic improvements');
-    return getBasicImprovedContent(current, type);
+  const industry =
+    user.industryName?.replace(/-/g, " ") || "professional";
+
+  const prompt = `As an expert resume writer, improve the following ${type} description for a ${industry} professional.
+Make it more impactful, quantifiable, and aligned with industry standards.
+
+Current content:
+"${current}"
+
+Requirements:
+1. Use strong action verbs
+2. Include metrics and results where possible
+3. Highlight relevant technical skills
+4. Keep it concise but detailed (2-4 sentences)
+5. Focus on achievements over responsibilities
+6. Use industry-specific keywords
+
+Return ONLY the improved description text. No labels, quotes, or explanations.`;
+
+  const result = await generateGeminiContent(prompt);
+
+  if (result.success) {
+    return {
+      content: result.content,
+      source: "ai",
+      model: result.model,
+    };
   }
 
-  const prompt = `
-    As an expert resume writer, improve the following ${type} description for a ${user.industryName} professional.
-    Make it more impactful, quantifiable, and aligned with industry standards.
-    Current content: "${current}"
-
-    Requirements:
-    1. Use action verbs
-    2. Include metrics and results where possible
-    3. Highlight relevant technical skills
-    4. Keep it concise but detailed
-    5. Focus on achievements over responsibilities
-    6. Use industry-specific keywords
-    
-    Format the response as a single paragraph without any additional text or explanations.
-  `;
-
-  try {
-    const result = await model.generateContent(prompt);
-    const response = result.response;
-    const improvedContent = response.text().trim();
-    return improvedContent;
-  } catch (error) {
-    console.error("Error improving content:", error);
-    console.warn('Falling back to basic improvement');
-    return getBasicImprovedContent(current, type);
+  // No API key — basic local improvement only
+  if (result.reason === "MISSING_API_KEY") {
+    return {
+      content: getBasicImprovedContent(current, type),
+      source: "fallback",
+      message: result.userMessage,
+    };
   }
+
+  // API key present but call failed — surface the real error to the user
+  console.error("Improve with AI failed:", result.reason, result.error?.message);
+  throw new Error(result.userMessage);
 }
 
-// Simple fallback improvement function
 const getBasicImprovedContent = (current, type) => {
   if (!current || current.trim().length === 0) {
     return `Enhanced ${type} content with measurable achievements and impact-focused language.`;
   }
-  
-  // Basic improvements: capitalize first letter and ensure proper ending
+
   let improved = current.trim();
   improved = improved.charAt(0).toUpperCase() + improved.slice(1);
-  if (!improved.endsWith('.')) {
-    improved += '.';
+  if (!improved.endsWith(".")) {
+    improved += ".";
   }
-  
-  return `${improved} [Note: Connect with AI service for advanced improvements]`;
+
+  return improved;
 };

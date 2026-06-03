@@ -1,6 +1,11 @@
 import { Suspense } from "react";
 import { BarLoader } from "react-spinners";
 
+export const metadata = {
+  title: "Interview Preparation",
+  description: "Practice with AI-generated mock interviews and track your progress",
+};
+
 export default function Layout({ children }) {
   return (
     <div className="px-5">

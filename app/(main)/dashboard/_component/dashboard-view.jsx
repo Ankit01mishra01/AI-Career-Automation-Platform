@@ -30,7 +30,7 @@ import { Progress } from "@/components/ui/progress";
 
 const DashboardView = ({ insights }) => {
   // Transform salary data for the chart
-  const salaryData = insights.salaryRanges.map((range) => ({
+  const salaryData = (insights.salaryRanges || []).map((range) => ({
     name: range.role,
     min: range.min / 1000,
     max: range.max / 1000,
@@ -67,11 +67,12 @@ const DashboardView = ({ insights }) => {
   const outlookColor = getMarketOutlookInfo(insights.marketOutlook).color;
 
   // Format dates using date-fns
-  const lastUpdatedDate = format(new Date(insights.lastUpdated), "dd/MM/yyyy");
-  const nextUpdateDistance = formatDistanceToNow(
-    new Date(insights.nextUpdate),
-    { addSuffix: true }
-  );
+  const lastUpdatedDate = insights.lastUpdated
+    ? format(new Date(insights.lastUpdated), "dd/MM/yyyy")
+    : "N/A";
+  const nextUpdateDistance = insights.nextUpdate
+    ? formatDistanceToNow(new Date(insights.nextUpdate), { addSuffix: true })
+    : "soon";
 
   return (
     <div className="space-y-6">
@@ -133,7 +134,7 @@ const DashboardView = ({ insights }) => {
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-1">
-              {insights.topSkills.map((skill) => (
+              {(insights.topSkills || []).map((skill) => (
                 <Badge key={skill} variant="secondary">
                   {skill}
                 </Badge>
@@ -195,7 +196,7 @@ const DashboardView = ({ insights }) => {
           </CardHeader>
           <CardContent>
             <ul className="space-y-4">
-              {insights.keyTrends.map((trend, index) => (
+              {(insights.keyTrends || []).map((trend, index) => (
                 <li key={index} className="flex items-start space-x-2">
                   <div className="h-2 w-2 mt-2 rounded-full bg-primary" />
                   <span>{trend}</span>
@@ -212,7 +213,7 @@ const DashboardView = ({ insights }) => {
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
-              {insights.recommendedSkills.map((skill) => (
+              {(insights.recommendedSkills || []).map((skill) => (
                 <Badge key={skill} variant="outline">
                   {skill}
                 </Badge>

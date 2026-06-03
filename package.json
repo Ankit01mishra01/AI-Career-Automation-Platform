@@ -8,9 +8,10 @@
     "start": "next start",
     "lint": "next lint",
     "db:generate": "prisma generate",
-    "db:push": "prisma db push",
-    "db:migrate": "prisma migrate dev",
-    "db:studio": "prisma studio",
+    "db:push": "node scripts/run-prisma.js db push",
+    "db:migrate": "node scripts/run-prisma.js migrate dev",
+    "db:studio": "node scripts/run-prisma.js studio",
+    "db:check": "node setup-db.js",
     "postinstall": "prisma generate"
   },
   "dependencies": {

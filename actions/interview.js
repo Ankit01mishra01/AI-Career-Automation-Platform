@@ -2,10 +2,7 @@
 
 import { db } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+import { generateGeminiContent } from "@/lib/gemini";
 
 export async function generateQuiz() {
   console.log('generateQuiz function called');
@@ -32,15 +29,6 @@ export async function generateQuiz() {
       user.industryName = 'Technology';
     }
 
-  // Check if API key is properly configured
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY;
-  if (!apiKey || apiKey === 'your_gemini_api_key_here') {
-    console.warn('AI API key not configured, using fallback quiz questions');
-    const fallbackQuestions = getFallbackQuizQuestions(user.industryName, user.skills);
-    console.log('Fallback questions generated:', fallbackQuestions.length);
-    return fallbackQuestions;
-  }
-
   const prompt = `
     Generate 10 technical interview questions for a ${user.industryName
     } professional${user.skills?.length ? ` with expertise in ${user.skills.join(", ")}` : ""
@@ -61,23 +49,27 @@ export async function generateQuiz() {
     }
   `;
 
+    const aiResult = await generateGeminiContent(prompt);
+
+    if (!aiResult.success) {
+      console.warn("Quiz AI unavailable:", aiResult.reason);
+      return getFallbackQuizQuestions(user.industryName, user.skills);
+    }
+
     try {
-      const result = await model.generateContent(prompt);
-      const response = result.response;
-      const text = response.text();
-      const cleanedText = text.replace(/```(?:json)?\n?/g, "").trim();
+      const cleanedText = aiResult.content
+        .replace(/```(?:json)?\n?/g, "")
+        .trim();
       const quiz = JSON.parse(cleanedText);
 
-      // Ensure we return an array
       if (quiz && Array.isArray(quiz.questions) && quiz.questions.length > 0) {
         return quiz.questions;
-      } else {
-        console.warn('AI returned invalid quiz format, using fallback');
-        return getFallbackQuizQuestions(user.industryName, user.skills);
       }
+
+      console.warn("AI returned invalid quiz format, using fallback");
+      return getFallbackQuizQuestions(user.industryName, user.skills);
     } catch (error) {
-      console.error("Error generating quiz:", error);
-      console.warn('Falling back to default quiz questions');
+      console.error("Error parsing quiz:", error);
       return getFallbackQuizQuestions(user.industryName, user.skills);
     }
   } catch (error) {
@@ -211,9 +203,15 @@ export async function saveQuizResult(questions, answers, score) {
 
   const user = await db.user.findUnique({
     where: { clerkUserId: userId },
+    select: {
+      id: true,
+      industryName: true,
+    },
   });
 
   if (!user) throw new Error("User not found");
+
+  const industryLabel = user.industryName?.replace(/-/g, " ") || "professional";
 
   const questionResults = questions.map((q, index) => ({
     question: q.question,
@@ -237,7 +235,7 @@ export async function saveQuizResult(questions, answers, score) {
       .join("\n\n");
 
     const improvementPrompt = `
-      The user got the following ${user.industryName} technical interview questions wrong:
+      The user got the following ${industryLabel} technical interview questions wrong:
 
       ${wrongQuestionsText}
 
@@ -247,14 +245,13 @@ export async function saveQuizResult(questions, answers, score) {
       Don't explicitly mention the mistakes, instead focus on what to learn/practice.
     `;
 
-    try {
-      const result = await model.generateContent(improvementPrompt);
-      const response = result.response;
-      improvementTip = response.text().trim();
-      console.log(improvementTip);
-    } catch (error) {
-      console.error("Error generating improvement tip:", error);
-      // Continue without improvement tip if generation fails
+    const tipResult = await generateGeminiContent(improvementPrompt);
+
+    if (tipResult.success) {
+      improvementTip = tipResult.content;
+    } else {
+      improvementTip =
+        "Review the topics from your incorrect answers and practice similar questions.";
     }
   }
 

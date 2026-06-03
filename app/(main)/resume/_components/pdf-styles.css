@@ -1,5 +1,6 @@
 /* PDF-specific styles to avoid oklch color issues */
-#resume-pdf {
+#resume-pdf,
+#cover-letter-pdf {
   background: white !important;
   color: black !important;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
@@ -8,28 +9,37 @@
   font-size: 14px !important;
 }
 
-#resume-pdf * {
+#resume-pdf *,
+#cover-letter-pdf * {
   color: black !important;
   background: transparent !important;
 }
 
-#resume-pdf h1, 
-#resume-pdf h2, 
-#resume-pdf h3, 
-#resume-pdf h4, 
-#resume-pdf h5, 
-#resume-pdf h6 {
+#resume-pdf h1,
+#resume-pdf h2,
+#resume-pdf h3,
+#resume-pdf h4,
+#resume-pdf h5,
+#resume-pdf h6,
+#cover-letter-pdf h1,
+#cover-letter-pdf h2,
+#cover-letter-pdf h3,
+#cover-letter-pdf h4,
+#cover-letter-pdf h5,
+#cover-letter-pdf h6 {
   color: #1a1a1a !important;
   background: transparent !important;
   margin: 10px 0 !important;
 }
 
-#resume-pdf a {
+#resume-pdf a,
+#cover-letter-pdf a {
   color: #0066cc !important;
   text-decoration: underline !important;
 }
 
-#resume-pdf code {
+#resume-pdf code,
+#cover-letter-pdf code {
   background: #f5f5f5 !important;
   color: #333 !important;
   padding: 2px 4px !important;
@@ -37,7 +47,8 @@
   font-family: 'Courier New', monospace !important;
 }
 
-#resume-pdf pre {
+#resume-pdf pre,
+#cover-letter-pdf pre {
   background: #f5f5f5 !important;
   color: #333 !important;
   padding: 10px !important;
@@ -45,26 +56,34 @@
   font-family: 'Courier New', monospace !important;
 }
 
-#resume-pdf blockquote {
+#resume-pdf blockquote,
+#cover-letter-pdf blockquote {
   border-left: 4px solid #ddd !important;
   margin: 10px 0 !important;
   padding-left: 15px !important;
   color: #666 !important;
 }
 
-#resume-pdf ul, #resume-pdf ol {
+#resume-pdf ul,
+#resume-pdf ol,
+#cover-letter-pdf ul,
+#cover-letter-pdf ol {
   margin: 10px 0 !important;
   padding-left: 20px !important;
 }
 
-#resume-pdf li {
+#resume-pdf li,
+#cover-letter-pdf li {
   margin: 5px 0 !important;
 }
 
 /* Override any gradient or oklch colors */
 #resume-pdf .gradient-title,
 #resume-pdf [class*="gradient"],
-#resume-pdf [style*="oklch"] {
+#resume-pdf [style*="oklch"],
+#cover-letter-pdf .gradient-title,
+#cover-letter-pdf [class*="gradient"],
+#cover-letter-pdf [style*="oklch"] {
   color: #1a1a1a !important;
   background: transparent !important;
 }

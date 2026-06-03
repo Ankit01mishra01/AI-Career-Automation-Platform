@@ -72,33 +72,46 @@ export function EntryForm({ type, entries, onChange }) {
   const {
     loading: isImproving,
     fn: improveWithAIFn,
-    data: improvedContent,
     error: improveError,
+    setData: setImprovedData,
   } = useFetch(improveWithAI);
 
-  // Add this effect to handle the improvement result
   useEffect(() => {
-    if (improvedContent && !isImproving) {
-      setValue("description", improvedContent);
-      toast.success("Description improved successfully!");
-    }
     if (improveError) {
       toast.error(improveError.message || "Failed to improve description");
     }
-  }, [improvedContent, improveError, isImproving, setValue]);
+  }, [improveError]);
 
-  // Replace handleImproveDescription with this
   const handleImproveDescription = async () => {
     const description = watch("description");
-    if (!description) {
+    if (!description?.trim()) {
       toast.error("Please enter a description first");
       return;
     }
 
-    await improveWithAIFn({
-      current: description,
-      type: type.toLowerCase(), // 'experience', 'education', or 'project'
-    });
+    setImprovedData(undefined);
+
+    try {
+      const result = await improveWithAIFn({
+        current: description,
+        type: type.toLowerCase(),
+      });
+
+      if (!result?.content) return;
+
+      setValue("description", result.content);
+
+      if (result.source === "ai") {
+        toast.success("Description improved with AI!");
+      } else {
+        toast.warning(
+          result.message ||
+            "Basic improvement applied — configure GEMINI_API_KEY for AI enhancements."
+        );
+      }
+    } catch (error) {
+      console.error("Improve with AI error:", error);
+    }
   };
 
   return (

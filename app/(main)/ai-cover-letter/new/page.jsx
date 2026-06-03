@@ -2,10 +2,32 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import CoverLetterGenerator from "../_components/cover-letter-generator";
+import { checkUser } from "@/lib/checkUser";
+import { redirect } from "next/navigation";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
-export default function NewCoverLetterPage() {
+export const metadata = {
+  title: "Create Cover Letter | Career Genius",
+  description:
+    "Generate a personalized, ATS-friendly cover letter with AI using your profile and job details",
+};
+
+export default async function NewCoverLetterPage() {
+  const user = await checkUser();
+
+  if (!user) {
+    redirect("/sign-in");
+  }
+
+  const userProfile = {
+    name: user.name,
+    industryName: user.industryName,
+    experience: user.experience,
+    skills: user.skills,
+    bio: user.bio,
+  };
+
   return (
     <div className="container mx-auto py-6">
       <div className="flex flex-col space-y-2">
@@ -17,16 +39,16 @@ export default function NewCoverLetterPage() {
         </Link>
 
         <div className="pb-6">
-          <h1 className="text-6xl font-bold gradient-title">
+          <h1 className="text-4xl md:text-6xl font-bold gradient-title">
             Create Cover Letter
           </h1>
           <p className="text-muted-foreground">
-            Generate a tailored cover letter for your job application
+            Generate a tailored, ATS-friendly cover letter for your job application
           </p>
         </div>
       </div>
 
-      <CoverLetterGenerator />
+      <CoverLetterGenerator userProfile={userProfile} />
     </div>
   );
 }

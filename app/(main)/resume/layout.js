@@ -1,5 +1,10 @@
 import React, { Suspense } from "react";
-import { BarLoader } from "react-spinners"
+import { BarLoader } from "react-spinners";
+
+export const metadata = {
+  title: "Resume Builder",
+  description: "Build and export an ATS-optimized resume with AI assistance",
+};
 
 const Layout = ({ children }) => {
   return (

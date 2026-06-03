@@ -3,10 +3,36 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getCoverLetter } from "@/actions/cover-letter";
 import CoverLetterPreview from "../_components/cover-letter-preview";
+import { notFound } from "next/navigation";
+
+export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }) {
+  const { id } = await params;
+  try {
+    const coverLetter = await getCoverLetter(id);
+    return {
+      title: `${coverLetter.jobTitle} at ${coverLetter.companyName} | Cover Letter`,
+      description: `Edit and export your cover letter for ${coverLetter.jobTitle} at ${coverLetter.companyName}`,
+    };
+  } catch {
+    return { title: "Cover Letter | Career Genius" };
+  }
+}
 
 export default async function EditCoverLetterPage({ params }) {
   const { id } = await params;
-  const coverLetter = await getCoverLetter(id);
+
+  let coverLetter;
+  try {
+    coverLetter = await getCoverLetter(id);
+  } catch {
+    notFound();
+  }
+
+  if (!coverLetter) {
+    notFound();
+  }
 
   return (
     <div className="container mx-auto py-6">
@@ -18,12 +44,12 @@ export default async function EditCoverLetterPage({ params }) {
           </Button>
         </Link>
 
-        <h1 className="text-6xl font-bold gradient-title mb-6">
-          {coverLetter?.jobTitle} at {coverLetter?.companyName}
+        <h1 className="text-4xl md:text-6xl font-bold gradient-title mb-6">
+          {coverLetter.jobTitle} at {coverLetter.companyName}
         </h1>
       </div>
 
-      <CoverLetterPreview content={coverLetter?.content} />
+      <CoverLetterPreview coverLetter={coverLetter} />
     </div>
   );
 }

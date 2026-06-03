@@ -2,21 +2,10 @@
 
 import { db } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+import { generateGeminiContent } from "@/lib/gemini";
 
 export const generateAIInsights = async (industry) => {
-  // Check if API key is properly configured
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY;
-  if (!apiKey || apiKey === 'your_gemini_api_key_here') {
-    console.warn('AI API key not configured, using fallback data');
-    return getFallbackInsights(industry);
-  }
-
-  try {
-    const prompt = `
+  const prompt = `
             Analyze the current state of the ${industry} industry and provide insights in ONLY the following JSON format without any additional notes or explanations:
             {
               "salaryRanges": [
@@ -36,15 +25,18 @@ export const generateAIInsights = async (industry) => {
             Include at least 5 skills and trends.
           `;
 
-    const result = await model.generateContent(prompt);
-    const response = result.response;
-    const text = response.text();
-    const cleanedText = text.replace(/```(?:json)?\n?/g, "").trim();
+  const result = await generateGeminiContent(prompt);
 
+  if (!result.success) {
+    console.warn("AI insights unavailable:", result.reason);
+    return getFallbackInsights(industry);
+  }
+
+  try {
+    const cleanedText = result.content.replace(/```(?:json)?\n?/g, "").trim();
     return JSON.parse(cleanedText);
   } catch (error) {
-    console.error('Error generating AI insights:', error);
-    console.warn('Falling back to default insights');
+    console.error("Error parsing AI insights:", error);
     return getFallbackInsights(industry);
   }
 };
